@@ -232,6 +232,16 @@ function parseSchedule(text) {
     if (fm) {
       const from = normalizeCode(fm[2]);
       const to = normalizeCode(fm[3]);
+      // Parse dep/arr times for duration calc
+      const depTime = fm[1];
+      const arrTimeMatch = line.match(/\d{2}:\d{2}\s+[A-Z]{3}(?:\/[A-Z])?\s*[-–]\s*\S.*?(\d{2}:\d{2})\s+[A-Z]{3}/);
+      // simpler: grab all HH:MM in the line
+      const allTimes = line.match(/\d{2}:\d{2}/g) || [];
+      const depMin = allTimes[0] ? timeToMin(allTimes[0]) : 0;
+      const arrMin = allTimes[1] ? timeToMin(allTimes[1]) : 0;
+      let durMin = arrMin - depMin;
+      if (durMin < 0) durMin += 24 * 60; // overnight
+
       let flightNo = '';
       let ac = '';
       let isPax = false;
@@ -245,7 +255,7 @@ function parseSchedule(text) {
         const acm = nl.match(/([A-Z0-9]+-\d{3}[A-Z]*)/i);
         if (acm && !ac) ac = acm[1];
       }
-      flights.push({ date: currentDate, type: isPax ? 'pax' : 'flight', from, to, flightNo, ac, raw: line });
+      flights.push({ date: currentDate, type: isPax ? 'pax' : 'flight', from, to, flightNo, ac, durMin, raw: line });
     }
     i++;
   }
@@ -325,10 +335,21 @@ function calculate() {
 
   // Pax summary at the bottom
   if (paxFlights.length > 0) {
+    const paxTotal = paxFlights.reduce((sum, f) => sum + (f.durMin || 0), 0);
     const paxBlock = document.createElement('div');
     paxBlock.style.cssText = 'margin-top:8px;padding:10px 14px;background:rgba(124,92,252,0.08);border:0.5px solid rgba(124,92,252,0.2);border-radius:8px;';
-    paxBlock.innerHTML = `<div style="font-size:11px;color:#7c5cfc;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">+ Перелёты в качестве пассажира</div>`
-      + paxFlights.map(f => `<div style="font-size:13px;color:var(--muted);margin-top:4px">${f.date} &nbsp; ${f.from} → ${f.to} &nbsp; <span style="color:var(--muted);font-size:11px">${f.flightNo || ''}</span></div>`).join('');
+    paxBlock.innerHTML = `<div style="font-size:11px;color:#7c5cfc;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">+ Перелёты в качестве пассажира</div>`
+      + paxFlights.map(f => {
+          const dur = f.durMin ? `<span style="color:#7c5cfc;font-weight:500">${minToTime(f.durMin)}</span>` : '';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-top:6px">
+            <span>${f.date} &nbsp; ${f.from} → ${f.to} &nbsp; <span style="font-size:11px">${f.flightNo || ''}</span></span>
+            ${dur}
+          </div>`;
+        }).join('')
+      + (paxTotal > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:0.5px solid rgba(124,92,252,0.2)">
+          <span style="font-size:12px;color:#7c5cfc">Итого пассажиром</span>
+          <span style="font-size:16px;font-weight:600;color:#7c5cfc">${minToTime(paxTotal)}</span>
+        </div>` : '');
     listEl.appendChild(paxBlock);
   }
 
