@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Налёт">
+<title>Налёт к оплате</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.08);
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --text: #f0f0f5;
+    --muted: #7a7a90;
+    --success: #34d399;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; font-size: 16px; }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    padding: 28px 20px 16px;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+  }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  main { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .card-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%; background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text); font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 12px; line-height: 1.6; padding: 12px;
+    resize: none; outline: none; min-height: 180px;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  .btn {
+    width: 100%; padding: 15px;
+    background: var(--accent);
+    color: #fff; font-size: 16px; font-weight: 600;
+    border: none; border-radius: var(--radius-sm);
+    cursor: pointer; letter-spacing: -0.2px;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+  .btn:active { opacity: 0.85; transform: scale(0.98); }
+  .btn.secondary {
+    background: var(--surface2); color: var(--muted);
+    border: 0.5px solid var(--border); font-size: 14px; padding: 11px;
+  }
+
+  .total-block {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 0.5px solid rgba(79,142,247,0.3);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .total-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .total-value { font-size: 48px; font-weight: 700; letter-spacing: -2px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .total-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .flights-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .flight-row {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .flight-row.reserve { opacity: 0.5; }
+  .flight-row.not-found { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
+
+  .flight-date { font-size: 11px; color: var(--muted); min-width: 54px; }
+  .flight-route { flex: 1; }
+  .flight-route-main { font-size: 14px; font-weight: 500; font-family: 'SF Mono', monospace; letter-spacing: 0.5px; }
+  .flight-route-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .flight-time {
+    font-size: 15px; font-weight: 600; font-family: 'SF Mono', monospace;
+    color: var(--success); white-space: nowrap;
+  }
+  .flight-time.not-found { color: var(--danger); font-size: 11px; }
+  .flight-time.reserve-tag { color: var(--muted); font-size: 11px; }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .dot.ok { background: var(--success); }
+  .dot.warn { background: var(--warn); }
+  .dot.err { background: var(--danger); }
+
+  .error-msg {
+    background: rgba(248,113,113,0.1); border: 0.5px solid rgba(248,113,113,0.3);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    font-size: 13px; color: var(--danger); line-height: 1.5;
+  }
+
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .hint code { font-family: 'SF Mono', monospace; background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+  .chip {
+    display: inline-block; padding: 3px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--muted);
+    border: 0.5px solid var(--border);
+  }
+  .chip.ok { background: rgba(52,211,153,0.1); color: var(--success); border-color: rgba(52,211,153,0.2); }
+
+  #results { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Налёт к оплате</h1>
+  <p>A320/321 · Лето 2026</p>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-label">График — вставьте текст</div>
+    <textarea id="scheduleInput" placeholder="09:50 LED - S.Peterburg 15:50 AYT - Antalya&#10;6 ч 00 мин A-320A - SU786&#10;&#10;16:50 AYT - Antalya 22:25 LED - S.Peterburg&#10;5 ч 35 мин A-320A - SU787&#10;..."></textarea>
+    <br><br>
+    <button class="btn" id="btnCalculate">Рассчитать налёт →</button>
+  </div>
+
+  <div id="results">
+    <div class="total-block" id="totalBlock">
+      <div class="total-label">Итого к оплате</div>
+      <div class="total-value" id="totalValue">—</div>
+      <div class="total-sub" id="totalSub"></div>
+    </div>
+
+    <div class="card" style="margin-top:0">
+      <div class="card-label">По рейсам</div>
+      <div class="flights-list" id="flightsList"></div>
+    </div>
+
+    <button class="btn secondary" id="btnReset">← Новый расчёт</button>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Как это работает</div>
+    <p class="hint">
+      Вставьте текст расписания в том формате, как он приходит с <code>crew.aeroflot.ru</code>.
+      Приложение само найдёт коды аэропортов, определит направление и подберёт норму по таблице Аэрофлота (Лето 2026).
+      Резервные дни в налёт не включаются.
+    </p>
+  </div>
+</main>
+
+<script>
+// ─── Flight time database (A320/321, Summer 2026) ───────────────────────────
+const DB = [
+["SVO","ABA","4:36","5:05"],["SVO","AUH","5:37","5:47"],["SVO","COV","4:48","4:29"],["SVO","SCO","3:05","3:02"],["SVO","ALA","4:32","4:55"],["SVO","AYT","5:17","4:53"],["SVO","KVK","2:18","2:09"],["SVO","ARH","1:58","1:54"],["SVO","NQZ","3:25","3:43"],["SVO","ASF","2:36","2:39"],["SVO","GUW","2:33","2:37"],["SVO","GYD","3:16","3:28"],["SVO","BAX","4:06","4:30"],["SVO","BSZ","4:16","4:40"],["SVO","BJV","5:32","5:05"],["SVO","BHK","4:01","4:12"],["SVO","VOG","1:57","2:01"],["SVO","GDZ","3:59","3:48"],["SVO","RGK","4:22","4:47"],["SVO","GRV","3:12","3:10"],["SVO","GNJ","3:20","3:26"],["SVO","DLM","5:25","5:00"],["SVO","DEL","6:07","6:34"],["SVO","SVX","2:21","2:38"],["SVO","EVN","3:36","3:30"],["SVO","IJK","1:52","2:00"],["SVO","IKT","5:38","6:15"],["SVO","KZN","1:39","1:42"],["SVO","KGD","2:42","2:34"],["SVO","KGF","3:33","3:53"],["SVO","KEJ","4:16","4:32"],["SVO","KRR","4:00","3:50"],["SVO","KJA","4:37","5:03"],["SVO","MOF","2:21","2:28"],["SVO","MCX","3:03","3:07"],["SVO","MRV","3:26","3:17"],["SVO","MSQ","1:32","1:29"],["SVO","MMK","2:36","2:24"],["SVO","NJC","3:25","3:40"],["SVO","NBC","1:51","1:57"],["SVO","GOJ","1:13","1:18"],["SVO","NOZ","4:19","4:48"],["SVO","OVB","4:03","4:21"],["SVO","NUX","3:32","3:39"],["SVO","OMS","3:22","3:40"],["SVO","REN","2:19","2:21"],["SVO","OSW","2:31","2:34"],["SVO","OSS","4:21","4:41"],["SVO","PEZ","1:25","1:27"],["SVO","PEE","2:05","2:15"],["SVO","LED","1:26","1:27"],["SVO","KUF","1:47","1:52"],["SVO","SKD","4:03","4:25"],["SVO","GSV","1:36","1:42"],["SVO","AER","3:48","3:38"],["SVO","STW","3:31","3:21"],["SVO","IST","5:16","4:49"],["SVO","SGC","3:11","3:28"],["SVO","SCW","1:52","1:55"],["SVO","TAS","4:04","4:27"],["SVO","IKA","4:05","4:05"],["SVO","TOF","4:04","4:28"],["SVO","TJM","2:50","2:59"],["SVO","ULV","1:36","1:39"],["SVO","UGC","3:36","3:52"],["SVO","UFA","2:10","2:17"],["SVO","FEG","4:15","4:47"],["SVO","HMA","2:56","3:12"],["SVO","HRG","6:29","6:19"],["SVO","CSY","1:25","1:25"],["SVO","CEK","2:31","2:40"],["SVO","SSH","6:35","6:10"],["SVO","CIT","4:03","4:26"],["SVO","ESL","3:37","3:25"],["SVO","YKS","6:37","7:07"],
+["VVO","BKK","6:49","6:28"],["VVO","SYX","5:49","5:29"],["GRV","AYT","2:38","2:28"],["GRV","IST","2:41","2:16"],["SVX","AYT","5:22","4:43"],["SVX","EVN","3:44","3:23"],["SVX","DWC","5:09","5:02"],["SVX","KJA","2:51","3:06"],["SVX","IST","5:30","4:56"],["IKT","BKK","6:13","6:07"],["IKT","CXR","6:37","6:40"],["IKT","HKT","6:44","6:53"],["IKT","SYX","5:22","5:42"],["KZN","AYT","4:54","4:23"],["KRR","SVX","3:43","4:03"],["KRR","EVN","1:33","1:32"],["KRR","DWC","3:59","4:10"],["KRR","KZN","3:26","3:40"],["KRR","KJA","5:32","6:11"],["KRR","OVB","4:45","5:28"],["KRR","IST","2:19","1:58"],["KRR","UFA","3:24","3:42"],["KJA","BKK","6:43","7:00"],["KJA","VVO","5:00","5:09"],["KJA","KHV","4:09","4:28"],["KJA","UUS","4:59","5:16"],["MRV","AYT","2:22","2:09"],["MRV","SVX","3:16","3:26"],["MRV","EVN","1:08","1:03"],["GOJ","AYT","5:11","4:42"],["OVB","SYX","6:27","7:04"],["KUF","AYT","4:42","4:10"],["AER","SVX","3:39","3:52"],["AER","EVN","1:08","1:14"],["AER","KZN","3:16","3:24"],["AER","GOJ","3:23","3:35"],["AER","PEE","3:40","3:46"],["AER","KUF","3:04","3:16"],["AER","IST","1:55","1:44"],["AER","TJM","3:48","4:01"],["AER","UFA","3:14","3:27"],["AER","CEK","3:26","3:44"],
+["LED","AYT","6:03","5:31"],["LED","ARH","1:30","1:30"],["LED","VOG","2:32","2:27"],["LED","RGK","4:38","5:10"],["LED","GRV","3:50","3:43"],["LED","SVX","2:50","2:53"],["LED","EVN","4:22","4:17"],["LED","IKT","5:52","6:25"],["LED","KZN","2:10","2:12"],["LED","KGD","1:46","1:44"],["LED","KRR","4:40","4:26"],["LED","KJA","4:53","5:06"],["LED","MCX","3:40","3:40"],["LED","MRV","4:04","3:57"],["LED","MMK","1:50","1:47"],["LED","GOJ","1:43","1:47"],["LED","NJC","3:27","3:36"],["LED","OVB","4:18","4:34"],["LED","OMS","3:39","3:52"],["LED","REN","2:50","2:51"],["LED","PEE","2:22","2:25"],["LED","KUF","2:17","2:25"],["LED","SKD","4:40","5:02"],["LED","AER","4:30","4:14"],["LED","SCW","1:45","1:54"],["LED","TAS","4:45","5:03"],["LED","TJM","3:01","3:12"],["LED","CEK","2:51","2:57"],["UFA","AYT","4:58","4:25"],["KHV","SYX","6:18","5:52"],["CSY","KGD","3:20","3:06"],["CSY","MCX","2:36","2:39"]
+];
+
+// Build lookup: "FROM-TO" → [there, back]
+const lookup = {};
+DB.forEach(([from, to, there, back]) => {
+  lookup[`${from}-${to}`] = there;
+  lookup[`${to}-${from}`] = back;
+});
+
+function timeToMin(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+function minToTime(m) {
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h}:${mm.toString().padStart(2, '0')}`;
+}
+
+// Normalize airport code: strip /B, /A suffixes
+function normalizeCode(raw) {
+  return raw.replace(/\/[A-Z]$/i, '').trim().toUpperCase();
+}
+
+function parseSchedule(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const flights = [];
+  let currentDate = '';
+
+  // Patterns
+  const dateRe = /^(\d{2}\.\d{2}),\s*[А-Яа-я]+/;
+  const flightRe = /(\d{2}:\d{2})\s+([A-Z]{3}(?:\/[A-Z])?)[^0-9]+\d{2}:\d{2}\s+([A-Z]{3}(?:\/[A-Z])?)/;
+  const reserveRe = /rezerve|резерв/i;
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (dateRe.test(line)) {
+      currentDate = line.match(/(\d{2}\.\d{2})/)[1];
+      i++; continue;
+    }
+
+    if (reserveRe.test(line)) {
+      flights.push({ date: currentDate, type: 'reserve', raw: line });
+      i++; continue;
+    }
+
+    const fm = line.match(flightRe);
+    if (fm) {
+      const from = normalizeCode(fm[2]);
+      const to = normalizeCode(fm[3]);
+      let flightNo = '';
+      let ac = '';
+      let isPax = false;
+      for (let j = i + 1; j <= i + 3 && j < lines.length; j++) {
+        const nl = lines[j];
+        if (/пассажир/i.test(nl)) isPax = true;
+        const fnm = nl.match(/([A-Z0-9]+-\d{3}[A-Z]*)\s*[-–]\s*(SU\d+)/i);
+        if (fnm) { ac = fnm[1]; flightNo = fnm[2]; }
+        const fnm2 = nl.match(/(SU\d+)/i);
+        if (fnm2 && !flightNo) flightNo = fnm2[1];
+        const acm = nl.match(/([A-Z0-9]+-\d{3}[A-Z]*)/i);
+        if (acm && !ac) ac = acm[1];
+      }
+      flights.push({ date: currentDate, type: isPax ? 'pax' : 'flight', from, to, flightNo, ac, raw: line });
+    }
+    i++;
+  }
+  return flights;
+}
+
+function calculate() {
+  const text = document.getElementById('scheduleInput').value.trim();
+  if (!text) return;
+
+  const flights = parseSchedule(text);
+  const listEl = document.getElementById('flightsList');
+  listEl.innerHTML = '';
+
+  let totalMin = 0;
+  let foundCount = 0;
+  let notFoundCount = 0;
+  const paxFlights = [];
+
+  flights.forEach(f => {
+    const row = document.createElement('div');
+
+    if (f.type === 'reserve') {
+      row.className = 'flight-row reserve';
+      row.innerHTML = `
+        <div class="dot warn"></div>
+        <div class="flight-date">${f.date}</div>
+        <div class="flight-route"><div class="flight-route-main">Резерв</div></div>
+        <div class="flight-time reserve-tag">не в налёте</div>
+      `;
+    } else if (f.type === 'pax') {
+      paxFlights.push(f);
+      row.className = 'flight-row reserve';
+      row.innerHTML = `
+        <div class="dot" style="background:#7c5cfc"></div>
+        <div class="flight-date">${f.date}</div>
+        <div class="flight-route">
+          <div class="flight-route-main">${f.from} → ${f.to}</div>
+          <div class="flight-route-sub">${f.flightNo || ''}${f.ac ? ' · ' + f.ac : ''}</div>
+        </div>
+        <div class="flight-time reserve-tag">пассажир</div>
+      `;
+    } else {
+      const key = `${f.from}-${f.to}`;
+      const norm = lookup[key];
+
+      if (norm) {
+        const mins = timeToMin(norm);
+        totalMin += mins;
+        foundCount++;
+        row.className = 'flight-row';
+        row.innerHTML = `
+          <div class="dot ok"></div>
+          <div class="flight-date">${f.date}</div>
+          <div class="flight-route">
+            <div class="flight-route-main">${f.from} → ${f.to}</div>
+            <div class="flight-route-sub">${f.flightNo || ''}${f.ac ? ' · ' + f.ac : ''}</div>
+          </div>
+          <div class="flight-time">${norm}</div>
+        `;
+      } else {
+        notFoundCount++;
+        row.className = 'flight-row not-found';
+        row.innerHTML = `
+          <div class="dot err"></div>
+          <div class="flight-date">${f.date}</div>
+          <div class="flight-route">
+            <div class="flight-route-main">${f.from} → ${f.to}</div>
+            <div class="flight-route-sub">${f.flightNo || ''}${f.ac ? ' · ' + f.ac : ''} · нет в таблице</div>
+          </div>
+          <div class="flight-time not-found">?</div>
+        `;
+      }
+    }
+    listEl.appendChild(row);
+  });
+
+  // Pax summary at the bottom
+  if (paxFlights.length > 0) {
+    const paxBlock = document.createElement('div');
+    paxBlock.style.cssText = 'margin-top:8px;padding:10px 14px;background:rgba(124,92,252,0.08);border:0.5px solid rgba(124,92,252,0.2);border-radius:8px;';
+    paxBlock.innerHTML = `<div style="font-size:11px;color:#7c5cfc;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">+ Перелёты в качестве пассажира</div>`
+      + paxFlights.map(f => `<div style="font-size:13px;color:var(--muted);margin-top:4px">${f.date} &nbsp; ${f.from} → ${f.to} &nbsp; <span style="color:var(--muted);font-size:11px">${f.flightNo || ''}</span></div>`).join('');
+    listEl.appendChild(paxBlock);
+  }
+
+  document.getElementById('totalValue').textContent = minToTime(totalMin);
+  document.getElementById('totalSub').textContent =
+    `${foundCount} рейс${foundCount === 1 ? '' : foundCount < 5 ? 'а' : 'ов'}`
+    + (notFoundCount ? ` · ${notFoundCount} не найдено` : '');
+
+  document.getElementById('results').style.display = 'flex';
+  document.getElementById('results').style.flexDirection = 'column';
+  document.getElementById('results').style.gap = '12px';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function doReset() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('scheduleInput').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnCalculate').addEventListener('click', calculate);
+  document.getElementById('btnReset').addEventListener('click', doReset);
+});
+</script>
+</body>
+</html>
